@@ -1,28 +1,52 @@
 from math import sqrt
 
 
-class GradientDescent(object):
+class _GradientDescent(object):
     """Class to hold gradient descent properties"""
-    def __init__(self, z0, alpha, grad=None, decreasing_rate='sqrt'):
+    def __init__(self, params, alpha, grad=None, decreasing_rate='sqrt'):
+        '''Gradient Descent handeler
+
+        Parameters
+        ----------
+        param: list of the Parameters
+        alpha: learning rate controler
+        grad: function computing the gradient
+            given the current parameters
+        decreasing_rate: {'sqrt', 'linear'} deacreasing rate
+            for the learning rate
+        '''
         self.alpha = alpha
-        self.z = z0
+        self.params = params
         self.decreasing_rate = decreasing_rate
         self._grad = grad
         self.t = 1
 
     def update(self, grad=None):
+        '''Update the parameters given
+
+        Parameters
+        ----------
+        grad: list, optional (default: None)
+            list of the gradient for each parameters
+        '''
+        grad = self._get_grad(grad)
         self.t += 1
-        self.z -= self._get_lr()*self.get_grad(grad)
+        self.params = [p-self._get_lr()*dp
+                       for p, dp in zip(self.params, grad)]
         return self.z
 
-    def get_grad(self, grad):
+    def _get_grad(self, grad):
+        '''Auxillary funciton, return the gradient
+        '''
         if grad is not None:
             return grad
-        elif self.grad is not None:
-            return self.grad(self.z)
+        elif self._grad is not None:
+            return self._grad(self.params)
         raise GD_Exception('No gradient furnished!')
 
     def _get_lr(self):
+        '''Auxillary funciton, return the learning rate
+        '''
         lr = self.alpha
         if self.decreasing_rate == 'sqrt':
             lr /= sqrt(self.t)
