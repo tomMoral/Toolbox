@@ -29,8 +29,8 @@ class _GradientDescent(object):
         grad: list, optional (default: None)
             list of the gradient for each parameters
         '''
-        grad = self._get_grad(grad)
         self.t += 1
+        grad = self._get_grad(grad)
         self.params = [p-self._get_lr()*dp
                        for p, dp in zip(self.params, grad)]
         return self.z
