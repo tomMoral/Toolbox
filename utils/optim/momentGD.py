@@ -21,7 +21,7 @@ class MomentGradientDescent(_GradientDescent):
             list of the gradient for each parameters
         '''
         self.t += 1
-        grad = self.get_grad(grad)
+        grad = self._get_grad(grad)
         self.p_grad = [dp + self.alpha_moment*pg
                        for dp, pg in zip(grad, self.p_grad)]
         lr = self._get_lr()

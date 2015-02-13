@@ -1,5 +1,5 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 setup(name='toolboxTom',
-      version='1.0',
-      packages=['utils', 'utils.optim'],
+      version='0.1',
+      packages=find_packages(),
      )
