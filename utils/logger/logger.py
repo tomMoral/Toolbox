@@ -5,7 +5,8 @@ import logging
 
 class Logger(logging.Logger):
     """Logging handler"""
-    def __init__(self, levl=logging.INFO, name='root', **kwargs):
+    def __init__(self, levl=logging.INFO, name='root',
+                 **kwargs):
         super(Logger, self).__init__(name, **kwargs)
         self.setLevel(levl)
         if len(self.handlers) < 1:
@@ -15,8 +16,8 @@ class Logger(logging.Logger):
                                           '- %(message)s')
             ch.setFormatter(formatter)
             self.addHandler(ch)
-            self.last_wr = ''
-            self.is_prog = False
+        self.last_wr = ''
+        self.is_prog = False
 
     def progress(self, name, i, max_iter, levl=logging.INFO):
         if self.level > levl:
@@ -27,14 +28,15 @@ class Logger(logging.Logger):
             self.is_prog = True
             out.write('{} - {} - '.format(logging.getLevelName(levl), name))
             out.write(' '*7)
+            self.last_wr = name
         out.write('\b'*7 + '{:7.2%}'.format(i/max_iter))
         if i == max_iter-1:
             out.write('\r{} - {} - Done   '
                       ''.format(logging.getLevelName(levl), name))
             out.write('\n')
             self.is_prog = False
+            self.last_wr = ''
         out.flush()
-        self.last_wr = name
 
     def set_mode(self, levl=logging.INFO):
         self.debug('Set mode: {}'.format(logging.getLevelName(levl)))
@@ -60,7 +62,7 @@ class Logger(logging.Logger):
         self.last_wr = ''
         super(Logger, self).info(msg, **kwargs)
 
-    def Warning(self, msg, **kwargs):
+    def warning(self, msg, **kwargs):
         if self.level > 30:
             return
         if self.is_prog:
