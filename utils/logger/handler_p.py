@@ -1,9 +1,10 @@
 from sys import stdout as out
 import logging
 from multiprocessing import Process, Pipe
+from collections import defaultdict
 
 
-from . import STOP, LOG, PROGRESS, SAVE
+from . import STOP, LOG, PROGRESS, SAVE, COST
 
 
 class Handler(Process):
@@ -35,6 +36,7 @@ class Handler(Process):
         self.unfinished = False
         self.pin, self.pout = Pipe()
         self.set_mode(levl)
+        self.graph = defaultdict(lambda: [[], []])
 
     def get_pin(self):
         '''Return the logging pipe
@@ -50,42 +52,6 @@ class Handler(Process):
             ch.setLevel(levl)
         self.level = levl
 
-    def _beggin_line(self):
-        if self.unfinished:
-            out.write('\n')
-
-    def _log(self, levl, msg, **kwargs):
-        if self.unfinished:
-            out.write('\n')
-        self.unfinished = False
-        self.last_writter = ''
-        self.log.log(levl, msg, **kwargs)
-
-    def _progress(self, i, name='Progress', max_iter=100,
-                  levl=logging.INFO):
-        '''Function to log progress'''
-        # If the previous line wasn't a current progress line
-        # Start a new progress logging line
-        if self.last_writter != name:
-            self._beggin_line()
-            self.unfinished = True
-            out.write('{} - {} - '.format(logging.getLevelName(levl), name))
-            out.write(' '*7)
-
-        #Update progresse entry
-        out.write('\b'*7 + '{:7.2%}'.format(i/max_iter))
-
-        # End the current progress entry if the max_iter is reached
-        if i >= max_iter-1:
-            out.write('\b'*7 + 'Done   \n')
-            self.unfinished = False
-
-        out.flush()
-        self.last_writter = name
-
-    def _save(self, levl, obj, fname='.pkl'):
-        pass
-
     def run(self):
         '''Handler loop'''
         while True:
@@ -99,5 +65,57 @@ class Handler(Process):
                 self._progress(levl, **entry)
             elif action == SAVE:
                 self._save(levl, **entry)
+            elif action == COST:
+                self._graph_cost(levl, **entry)
             else:
                 self._log(levl, entry)
+
+    def _beggin_line(self):
+        if self.unfinished:
+            out.write('\n')
+
+    def _log(self, levl, msg, **kwargs):
+        if self.unfinished:
+            out.write('\n')
+        self.unfinished = False
+        self.last_writter = ''
+        self.log.log(levl, msg, **kwargs)
+
+    def _progress(self, levl=logging.INFO, iteration=0,
+                  name='Progress', max_iter=100):
+        '''Function to log progress'''
+        # If the previous line wasn't a current progress line
+        # Start a new progress logging line
+        if self.last_writter != name:
+            self._beggin_line()
+            self.unfinished = True
+            out.write('{} - {} - '.format(logging.getLevelName(levl), name))
+            out.write(' '*7)
+
+        #Update progresse entry
+        out.write('\b'*7 + '{:7.2%}'.format(iteration/max_iter))
+
+        # End the current progress entry if the max_iter is reached
+        if iteration >= max_iter-1:
+            out.write('\b'*7 + 'Done   \n')
+            self.unfinished = False
+
+        out.flush()
+        self.last_writter = name
+
+    def _graph_cost(self, levl=logging.INFO, cost=0, iteration=1,
+                    name='Cost'):
+
+        graph = self.graph[name]
+        graph[0] += [iteration]
+        graph[1] += [iteration]
+
+        import matplotlib as mpl
+        mpl.interactive(True)
+        import matplotlib.pyplot as plt
+        plt.figure(name)
+        plt.cla()
+        plt.plot()
+
+    def _save(self, levl, obj, fname='.pkl'):
+        pass
