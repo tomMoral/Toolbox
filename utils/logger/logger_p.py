@@ -1,7 +1,7 @@
 import logging
 
 
-from . import STOP, LOG, PROGRESS, SAVE
+from . import STOP, LOG, PROGRESS, SAVE, MODE
 from .handler_p import Handler
 
 
@@ -28,8 +28,9 @@ class Logger(object):
     def set_mode(self, levl=logging.INFO):
         '''Change the logging level of the logger and the console handler
         '''
+        print('send')
+        self.qin.send((MODE, self.level, levl))
         self.level = levl
-        self.console.set_mode(levl)
 
     def end(self):
         '''Finish to handle the log entry and stop the console handler

@@ -1,10 +1,12 @@
 from sys import stdout as out
 import logging
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Manager, Lock
 from collections import defaultdict
 
 
-from . import STOP, LOG, PROGRESS, SAVE, COST
+from . import STOP, PROGRESS, SAVE, COST, MODE
+
+manager = Manager()
 
 
 class Handler(Process):
@@ -35,6 +37,8 @@ class Handler(Process):
         self.last_writter = ''
         self.unfinished = False
         self.pin, self.pout = Pipe()
+        self.level = manager.Value('i', 0)
+        self.lock = Lock()
         self.set_mode(levl)
         self.graph = defaultdict(lambda: [[], []])
 
@@ -67,6 +71,8 @@ class Handler(Process):
                 self._save(levl, **entry)
             elif action == COST:
                 self._graph_cost(levl, **entry)
+            elif action == MODE:
+                self.set_mode(entry)
             else:
                 self._log(levl, entry)
 
