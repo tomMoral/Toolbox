@@ -50,7 +50,8 @@ class Handler(Process):
     def set_mode(self, levl=logging.INFO):
         '''Change the logging level of this handler
         '''
-        self.log.debug('Set mode: {}'.format(logging.getLevelName(levl)))
+        self._log(logging.DEBUG, 'LOGGER - Set mode: {}'
+                  ''.format(logging.getLevelName(levl)))
         self.log.setLevel(levl)
         for ch in self.log.handlers:
             ch.setLevel(levl)
@@ -58,23 +59,28 @@ class Handler(Process):
 
     def run(self):
         '''Handler loop'''
-        while True:
-            action, levl, entry = self.pout.recv()
-            if action == STOP:
-                self._log(10, 'End the logger')
-                return 0
-            if levl < self.level:
-                continue
-            if action == PROGRESS:
-                self._progress(levl, **entry)
-            elif action == SAVE:
-                self._save(levl, **entry)
-            elif action == COST:
-                self._graph_cost(levl, **entry)
-            elif action == MODE:
-                self.set_mode(entry)
-            else:
-                self._log(levl, entry)
+        try:
+            while True:
+                action, levl, entry = self.pout.recv()
+                if action == STOP:
+                    self._log(logging.DEBUG, 'LOGGER - End the logger')
+                    return 0
+                if levl < self.level:
+                    continue
+                if action == PROGRESS:
+                    self._progress(levl, **entry)
+                elif action == SAVE:
+                    self._save(levl, **entry)
+                elif action == COST:
+                    self._graph_cost(levl, **entry)
+                elif action == MODE:
+                    self.set_mode(entry)
+                else:
+                    self._log(levl, entry)
+        except KeyboardInterrupt:
+            self._log(10, 'LOGGER - KeyboardInterrupt')
+        finally:
+            return 0
 
     def _beggin_line(self):
         if self.unfinished:
