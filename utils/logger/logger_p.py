@@ -17,26 +17,29 @@ class Logger(object):
     def __init__(self, levl=logging.INFO):
         '''Create a basic Logger and add a console handler
         '''
+        super(Logger, self).__init__()
         self.console = Handler(levl=levl)
         self.qin = self.console.get_pin()
         self.console.start()
+        self._alive = True
         self.level = levl
-
-    def __del__(self):
-        self.end()
 
     def set_mode(self, levl=logging.INFO):
         '''Change the logging level of the logger and the console handler
         '''
-        print('send')
         self.qin.send((MODE, self.level, levl))
         self.level = levl
 
     def end(self):
         '''Finish to handle the log entry and stop the console handler
         '''
-        self.qin.send((STOP, None, None))
-        self.console.join()
+        if self._alive:
+            self.qin.send((STOP, None, None))
+            self.console.join()
+            self._alive = False
+
+    def is_alive(self):
+        return self._alive
 
     def debug(self, msg, **kwargs):
         if self.level <= 10:

@@ -24,7 +24,7 @@ class Handler(Process):
         SAVE: Object to save/optional nameFile
     """
     def __init__(self, levl=logging.INFO, name='root', **kwargs):
-        super(Handler, self).__init__()
+        super(Handler, self).__init__(name='Log_process')
         # Get root logger
         self.log = logging.getLogger(name)
         # Add a default handler to print in console
@@ -124,4 +124,7 @@ class Handler(Process):
         plt.plot()
 
     def _save(self, levl, obj, fname='.pkl'):
+
+        if fname[0] == '.':
+            fname = obj.__name__ + fname
         pass
