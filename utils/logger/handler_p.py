@@ -2,6 +2,7 @@ from sys import stdout as out
 import logging
 from multiprocessing import Process, Pipe, Manager, Lock
 from collections import defaultdict
+from time import time
 
 
 from . import STOP, PROGRESS, SAVE, COST, MODE
@@ -41,6 +42,7 @@ class Handler(Process):
         self.lock = Lock()
         self.set_mode(levl)
         self.graph = defaultdict(lambda: [[], []])
+        self.lst_time = {}
 
     def get_pin(self):
         '''Return the logging pipe
@@ -79,7 +81,10 @@ class Handler(Process):
                     self._log(levl, entry)
         except KeyboardInterrupt:
             self._log(10, 'LOGGER - KeyboardInterrupt')
+        except Exception as e:
+            print(e.args)
         finally:
+            print('HANDELER - quit')
             return 0
 
     def _beggin_line(self):
@@ -99,13 +104,16 @@ class Handler(Process):
         # If the previous line wasn't a current progress line
         # Start a new progress logging line
         if self.last_writter != name:
+            self.lst_time[name] = 0
             self._beggin_line()
             self.unfinished = True
             out.write('{} - {} - '.format(logging.getLevelName(levl), name))
             out.write(' '*7)
 
-        #Update progresse entry
-        out.write('\b'*7 + '{:7.2%}'.format(iteration/max_iter))
+            #Update progresse entry
+        if time() - self.lst_time[name] > 0.1:
+            self.lst_time[name] = time()
+            out.write('\b'*7 + '{:7.2%}'.format(iteration/max_iter))
 
         # End the current progress entry if the max_iter is reached
         if iteration >= max_iter-1:
