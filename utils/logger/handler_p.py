@@ -1,8 +1,10 @@
 from sys import stdout as out
+import numpy as np
 import logging
 from multiprocessing import Process, Pipe, Manager, Lock
 from collections import defaultdict
 from time import time
+from collections import defaultdict
 
 
 from . import STOP, PROGRESS, SAVE, COST, MODE
@@ -24,7 +26,8 @@ class Handler(Process):
         PROGRESS: name/max_iter/iteration
         SAVE: Object to save/optional nameFile
     """
-    def __init__(self, levl=logging.INFO, name='root', **kwargs):
+    def __init__(self, levl=logging.INFO, name='root', graph_update=0.005,
+                 **kwargs):
         super(Handler, self).__init__(name='Log_process')
         # Get root logger
         self.log = logging.getLogger(name)
@@ -41,8 +44,8 @@ class Handler(Process):
         self.level = manager.Value('i', 0)
         self.lock = Lock()
         self.set_mode(levl)
-        self.graph = defaultdict(lambda: [[], []])
-        self.lst_time = {}
+        self.graph = defaultdict(lambda: defaultdict(lambda: None))
+        self.lst_time = defaultdict(lambda: 0)
 
     def get_pin(self):
         '''Return the logging pipe
@@ -80,9 +83,13 @@ class Handler(Process):
                 else:
                     self._log(levl, entry)
         except KeyboardInterrupt:
-            self._log(10, 'LOGGER - KeyboardInterrupt')
-        except Exception as e:
-            print(e.args)
+            if 10 >= self.level:
+                self._log(10, 'LOGGER - KeyboardInterrupt')
+        except:
+            import sys
+            e, v = sys.exc_info()[:2]
+            print('Msg', v)
+            print("Test: %s - %s" % e.__name__, v)
         finally:
             print('HANDELER - quit')
             return 0
@@ -111,7 +118,7 @@ class Handler(Process):
             out.write(' '*7)
 
             #Update progresse entry
-        if time() - self.lst_time[name] > 0.1:
+        if time() - self.lst_time[name] >= 0.1:
             self.lst_time[name] = time()
             out.write('\b'*7 + '{:7.2%}'.format(iteration/max_iter))
 
@@ -119,23 +126,46 @@ class Handler(Process):
         if iteration >= max_iter-1:
             out.write('\b'*7 + 'Done   \n')
             self.unfinished = False
+            self.last_writter = ''
 
         out.flush()
         self.last_writter = name
 
     def _graph_cost(self, levl=logging.INFO, cost=0, iteration=1,
-                    name='Cost'):
-
-        graph = self.graph[name]
-        graph[0] += [iteration]
-        graph[1] += [iteration]
-
+                    name='Cost', curve='cost', end=False):
         import matplotlib as mpl
         mpl.interactive(True)
         import matplotlib.pyplot as plt
-        plt.figure(name)
-        plt.cla()
-        plt.plot()
+        if end:
+            print('end')
+            self._update_fig(name)
+            return
+
+        # Update the graph
+        line = self.graph[name][curve]
+        if line is None:
+            plt.figure(name)
+            line = plt.loglog([iteration+1], [cost], '-o', label=curve)[0]
+            plt.legend()
+        else:
+            line.set_xdata(np.r_[line.get_xdata(), iteration])
+            line.set_ydata(np.r_[line.get_ydata(), cost])
+        self.graph[name][curve] = line
+
+        if time()-self.lst_time[name] >= 0.1:
+            self._update_fig(name)
+
+    def _update_fig(self, name):
+        import matplotlib.pyplot as plt
+        fig = plt.figure(name)
+        plt.draw()
+        ax = fig.get_axes()[0]
+        ax.relim()
+        ax.autoscale_view()
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+        self.lst_time[name] = time()
+        print('Updated')
 
     def _save(self, levl, obj, fname='.pkl'):
 

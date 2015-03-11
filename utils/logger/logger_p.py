@@ -1,7 +1,7 @@
 import logging
 
 
-from . import STOP, LOG, PROGRESS, SAVE, MODE
+from . import STOP, LOG, PROGRESS, SAVE, MODE, COST
 from .handler_p import Handler
 
 
@@ -14,15 +14,19 @@ class Logger(object):
     use progress to handle progress in loop
     use end to stop the logger
     """
+    console = Handler(levl=20)
+    console.start()
+    references = 0
+    _alive = True
+
     def __init__(self, levl=logging.INFO):
         '''Create a basic Logger and add a console handler
         '''
         super(Logger, self).__init__()
-        self.console = Handler(levl=levl)
-        self.qin = self.console.get_pin()
-        self.console.start()
-        self._alive = True
+        self.qin = Logger.console.get_pin()
         self.level = levl
+        self.set_mode(levl)
+        Logger.references += 1
 
     def set_mode(self, levl=logging.INFO):
         '''Change the logging level of the logger and the console handler
@@ -33,10 +37,11 @@ class Logger(object):
     def end(self):
         '''Finish to handle the log entry and stop the console handler
         '''
-        if self._alive:
+        Logger.references -= 1
+        if Logger.references == 0 and Logger._alive:
             self.qin.send((STOP, None, None))
-            self.console.join()
-            self._alive = False
+            Logger.console.join()
+            Logger._alive = False
 
     def is_alive(self):
         return self._alive
@@ -77,8 +82,8 @@ class Logger(object):
                                name=name))
             self.qin.send((PROGRESS, levl, kwargs))
 
-    def graphical_cost(self, cost=0, n_iteration=1, name='Cost',
-                       levl=logging.INFO, **kwargs):
+    def graphical_cost(self, cost=0, iteration=1, name='Cost',
+                       levl=logging.INFO, end=False, **kwargs):
         '''Log a progression, typically for a loop,
 
         Parameters
@@ -89,8 +94,8 @@ class Logger(object):
         levl: Level of the log
         '''
         if self.level <= levl:
-            kwargs.update(dict(cost=cost, n_iteration=n_iteration,
-                               name=name))
+            kwargs.update(dict(cost=cost, iteration=iteration,
+                               name=name, end=end))
             self.qin.send((COST, levl, kwargs))
 
     def save(self, levl=logging.INFO, **kwargs):
