@@ -1,18 +1,23 @@
 import numpy as np
 
-from . import _GradientDescent, GD_Exception
+
+from . import _GradientDescent
 
 
 class MomentGradientDescent(_GradientDescent):
     """Gradient Descent with moment update"""
-    def __init__(self, params, alpha, alpha_moment=0.4, grad=None,
-                 decreasing_rate='sqrt'):
+    def __init__(self, problem, decreasing_rate='', alpha_moment=0.9,
+                 restart=True, **kwargs):
         super(MomentGradientDescent, self).__init__(
-            params, alpha, grad, decreasing_rate)
+            problem, decreasing_rate, **kwargs)
+        self.p_grad = [np.zeros(s) for s in problem.sizes]
         self.alpha_moment = alpha_moment
-        self.p_grad = [np.zeros(np.shape(p)) for p in params]
+        self.restart = restart
 
-    def update(self, grad=None):
+    def __repr__(self):
+        return 'MomentDescent - '+str(self.restart)
+
+    def p_update(self):
         '''Update the parameters with a moment
 
         Parameters
@@ -20,37 +25,54 @@ class MomentGradientDescent(_GradientDescent):
         grad: list, optional (default: None)
             list of the gradient for each parameters
         '''
-        self.t += 1
-        grad = self._get_grad(grad)
+        self.ppt = self.pt
+        grad = self.pb.grad(self.pt)
         self.p_grad = [dp + self.alpha_moment*pg
                        for dp, pg in zip(grad, self.p_grad)]
         lr = self._get_lr()
-        self.params = [p - lr*dp
-                       for p, dp in zip(self.params, self.p_grad)]
-        return self.params
+        self.pt = [p-l*dp for l, p, dp in zip(lr, self.pt, self.p_grad)]
+        if self.restart and self.pb.cost(self.pt) > self.cost[-1]:
+            self.pt = self.ppt
+            grad = self.pb.grad(self.pt)
+            self.p_grad = grad
+            self.pt = [p-lr*dp for p, dp in zip(self.pt, grad)]
 
 
 class NesterovMomentGradientDescent(_GradientDescent):
     """Gradient Descent with the nesterov momentum"""
-    def __init__(self, params, alpha, alpha_moment=0.4, grad=None,
-                 decreasing_rate='sqrt'):
+    def __init__(self, problem, decreasing_rate='', alpha_moment=0.9,
+                 restart=False, **kwargs):
         super(NesterovMomentGradientDescent, self).__init__(
-            params, alpha, grad, decreasing_rate)
+            problem, decreasing_rate, **kwargs)
         self.alpha_moment = alpha_moment
-        self.p_grad = [np.zeros(np.shape(p)) for p in params]
-        if grad is not None:
+        self.p_grad = [np.zeros(s) for s in problem.sizes]
+        self.restart = restart
+        '''if grad is not None:
             raise GD_Exception('Nesterov accelerated gradient need a'
-                               ' gradient computation function for grad')
+                               ' gradient computation function for grad')'''
 
-    def update(self):
+    def __repr__(self):
+        return 'NesterovMomentDescent - '+str(self.restart)
+
+    def p_update(self):
         '''Update the parameters with the nesterov momentum
         '''
-        self.t += 1
-        pz = self.params
+        self.ppt = self.pt
         lr = self._get_lr()
-        self.params = [p+pg for p, pg in zip(self.params, self.p_grad)]
-        grad = self._get_grad()
-        self.params = [p-lr*dp for p, dp in zip(self.params, grad)]
+
+        # Compute the intermediate step
+        self.yn = [p+pg for p, pg in zip(self.pt, self.p_grad)]
+
+        # Update
+        grad = self.pb.grad(self.yn)
+        self.pt = [p-lr*dp for p, dp in zip(self.yn, grad)]
+
+        # Restart criterion
+        if self.restart and self.pb.cost(self.pt) > self.cost[-1]:
+            self.pt = self.ppt
+            grad = self.pb.grad(self.pt)
+            self.pt = [p-lr*dp for p, dp in zip(self.pt, grad)]
+
+        # Save movement direction
         self.p_grad = [self.alpha_moment*(p-pp)
-                       for p, pp in zip(self.params, pz)]
-        return self.params
+                       for p, pp in zip(self.pt, self.ppt)]
