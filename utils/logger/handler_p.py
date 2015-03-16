@@ -1,15 +1,12 @@
 from sys import stdout as out
 import numpy as np
 import logging
-from multiprocessing import Process, Pipe, Manager, Lock
+from multiprocessing import Process, Pipe, Manager, Lock, Queue
 from collections import defaultdict
 from time import time
-from collections import defaultdict
 
 
 from . import STOP, PROGRESS, SAVE, COST, MODE
-
-manager = Manager()
 
 
 class Handler(Process):
@@ -27,7 +24,7 @@ class Handler(Process):
         SAVE: Object to save/optional nameFile
     """
     def __init__(self, levl=logging.INFO, name='root', graph_update=0.005,
-                 **kwargs):
+                 default_line_style='-o', **kwargs):
         super(Handler, self).__init__(name='Log_process')
         # Get root logger
         self.log = logging.getLogger(name)
@@ -41,16 +38,21 @@ class Handler(Process):
         self.last_writter = ''
         self.unfinished = False
         self.pin, self.pout = Pipe()
-        self.level = manager.Value('i', 0)
+        self.qin = Queue()
+        self._treat = self.qin.get
+        self.manager = Manager()
+        self.level = self.manager.Value('i', 0)
         self.lock = Lock()
         self.set_mode(levl)
         self.graph = defaultdict(lambda: defaultdict(lambda: None))
         self.lst_time = defaultdict(lambda: 0)
+        self.default_line_style = default_line_style
 
     def get_pin(self):
         '''Return the logging pipe
         '''
-        return self.pin
+        return self.qin
+        #return self.pin
 
     def set_mode(self, levl=logging.INFO):
         '''Change the logging level of this handler
@@ -66,7 +68,7 @@ class Handler(Process):
         '''Handler loop'''
         try:
             while True:
-                action, levl, entry = self.pout.recv()
+                action, levl, entry = self._treat()
                 if action == STOP:
                     self._log(logging.DEBUG, 'LOGGER - End the logger')
                     return 0
@@ -83,15 +85,16 @@ class Handler(Process):
                 else:
                     self._log(levl, entry)
         except KeyboardInterrupt:
-            if 10 >= self.level:
-                self._log(10, 'LOGGER - KeyboardInterrupt')
+            if 20 >= self.level:
+                self._log(20, 'LOGGER - KeyboardInterrupt')
         except:
-            import sys
-            e, v = sys.exc_info()[:2]
-            print('Msg', v)
-            print("Test: %s - %s" % e.__name__, v)
+            if 50 >= self.level:
+                import sys
+                e, v = sys.exc_info()[:2]
+                self._log(40, '{} - {}'.format(e.__class__.__name__, v))
         finally:
-            print('HANDELER - quit')
+            if 40 >= self.level:
+                self._log(40, 'HANDELER - quit')
             return 0
 
     def _beggin_line(self):
@@ -132,7 +135,8 @@ class Handler(Process):
         self.last_writter = name
 
     def _graph_cost(self, levl=logging.INFO, cost=0, iteration=1,
-                    name='Cost', curve='cost', end=False):
+                    name='Cost', curve='cost', end=False, linestyle=None,
+                    **kwargs):
         import matplotlib as mpl
         mpl.interactive(True)
         import matplotlib.pyplot as plt
@@ -140,16 +144,21 @@ class Handler(Process):
             print('end')
             self._update_fig(name)
             return
-
         # Update the graph
         line = self.graph[name][curve]
         if line is None:
             plt.figure(name)
-            line = plt.loglog([iteration+1], [cost], '-o', label=curve)[0]
+            line = plt.loglog([iteration], [cost], self.default_line_style,
+                              label=curve, **kwargs)[0]
             plt.legend()
         else:
             line.set_xdata(np.r_[line.get_xdata(), iteration])
             line.set_ydata(np.r_[line.get_ydata(), cost])
+
+        if linestyle is not None:
+            line.set_linestyle(linestyle)
+            line.set_marker('')
+
         self.graph[name][curve] = line
 
         if time()-self.lst_time[name] >= 0.1:
