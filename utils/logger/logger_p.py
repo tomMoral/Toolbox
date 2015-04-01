@@ -27,14 +27,15 @@ class Logger(object):
             Logger._alive = True
         return Logger.console.get_pin()
 
-    def __init__(self, name='', levl=logging.INFO):
+    def __init__(self, name='', levl=None):
         '''Create a basic Logger and add a console handler
         '''
         super(Logger, self).__init__()
-        self.level = levl
+        self.level = logging.DEBUG
         Logger.references += 1
         self.qin = Logger.restart()
-        self.set_mode(levl)
+        if levl is not None:
+            self.set_mode(levl)
 
     def _log(self, entry):
         try:
@@ -46,7 +47,7 @@ class Logger(object):
         '''Change the logging level of the logger and the console handler
         '''
         #self.qin.send((MODE, self.level, levl))
-        self._log((MODE, self.level, levl))
+        self._log((MODE, 100, levl))
         self.level = levl
 
     def end(self):
@@ -54,6 +55,13 @@ class Logger(object):
         '''
         Logger.references -= 1
         if Logger.references == 0 and Logger._alive:
+            self._log((STOP, None, None))
+            Logger.console.join()
+            Logger._alive = False
+
+    def kill(self):
+        if Logger._alive:
+            self._log((LOG, 10, 'kill'))
             self._log((STOP, None, None))
             Logger.console.join()
             Logger._alive = False

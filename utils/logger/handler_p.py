@@ -57,7 +57,7 @@ class Handler(Process):
     def set_mode(self, levl=logging.INFO):
         '''Change the logging level of this handler
         '''
-        self._log(logging.DEBUG, 'LOGGER - Set mode: {}'
+        self._log(logging.INFO, 'LOGGER - Set mode: {}'
                   ''.format(logging.getLevelName(levl)))
         self.log.setLevel(levl)
         for ch in self.log.handlers:
@@ -70,8 +70,8 @@ class Handler(Process):
             while True:
                 action, levl, entry = self._treat()
                 if action == STOP:
-                    self._log(logging.DEBUG, 'LOGGER - End the logger')
-                    return 0
+                    self._log(logging.INFO, 'HANDLER - End properly')
+                    break
                 if levl < self.level:
                     continue
                 if action == PROGRESS:
@@ -88,13 +88,13 @@ class Handler(Process):
             if 20 >= self.level:
                 self._log(20, 'LOGGER - KeyboardInterrupt')
         except:
-            if 50 >= self.level:
+            if 40 >= self.level:
                 import sys
                 e, v = sys.exc_info()[:2]
                 self._log(40, '{} - {}'.format(e.__class__.__name__, v))
         finally:
-            if 40 >= self.level:
-                self._log(40, 'HANDELER - quit')
+            if 10 >= self.level:
+                self._log(10, 'HANDELER - quit')
             return 0
 
     def _beggin_line(self):
@@ -126,7 +126,7 @@ class Handler(Process):
             out.write('\b'*7 + '{:7.2%}'.format(iteration/max_iter))
 
         # End the current progress entry if the max_iter is reached
-        if iteration >= max_iter-1:
+        if iteration >= max_iter and self.unfinished:
             out.write('\b'*7 + 'Done   \n')
             self.unfinished = False
             self.last_writter = ''
@@ -141,7 +141,8 @@ class Handler(Process):
         mpl.interactive(True)
         import matplotlib.pyplot as plt
         if end:
-            print('end')
+            if 20 >= self.level:
+                self._log(20, 'End graphical cost follow up')
             self._update_fig(name)
             return
         # Update the graph
@@ -174,7 +175,6 @@ class Handler(Process):
         fig.canvas.draw()
         fig.canvas.flush_events()
         self.lst_time[name] = time()
-        print('Updated')
 
     def _save(self, levl, obj, fname='.pkl'):
 
