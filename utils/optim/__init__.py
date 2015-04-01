@@ -1,5 +1,7 @@
 from math import sqrt
 import numpy as np
+from utils.logger import Logger
+log = Logger('_GradientDescent')
 
 
 class _GradientDescent(object):
@@ -21,12 +23,12 @@ class _GradientDescent(object):
         self.alpha = 4/problem.L
         self.decreasing_rate = decreasing_rate
         self.t = 0
-        self.pt = problem.x0
+        self.pt = np.copy(problem.x0)
         self.cost = [self.pb.cost(self.pt)]
         self.stop = stop
-        self.go = True
+        self.finished = False
         self.tol = tol
-        self.log_x = [self.pt[0]]
+        self.log_x = [np.copy(self.pt[0])]
 
     def __repr__(self):
         return '_GradientDescent'
@@ -39,12 +41,12 @@ class _GradientDescent(object):
         grad: list, optional (default: None)
             list of the gradient for each parameters
         '''
-        if not self.go:
-            return False
+        if self.finished:
+            return True
         self.t += 1
         self.p_update()
         self.cost += [self.pb.cost(self.pt)]
-        self.log_x += [self.pt[0]]
+        self.log_x += [np.copy(self.pt[0])]
         return self._stop()
 
     def p_update(self):
@@ -65,27 +67,38 @@ class _GradientDescent(object):
             lr /= self.t
         elif self.decreasing_rate == 'k2':
             lr *= 2/(self.t+2)
-        return [lr]
+        elif hasattr(self.decreasing_rate, '__call__'):
+            lr = self.decreasing_rate(self.t)
+        return [lr]*len(self.pt)
 
     def _stop(self):
+        '''Implement stopping criterion
+        '''
+        # No stopping criterions
         if self.stop == 'none':
-            return True
+            return False
+
         cost = self.cost
         lc = cost[-1]
+        # If the cost move less than tol, stop
         if len(cost) > 5 and lc <= cost[-4] < lc+self.tol:
-            print('Stop', self.__repr__())
-            self.go = False
-            return False
+            log.info('Stop - No advance cost - {}'.format(self.__repr__()))
+            self.finished = True
+            return self.finished
+
+        # If |x_n-x_n-1| < tol, stop
         if np.sum(np.abs(self.log_x[-1]-self.log_x[-2])) < self.tol:
-            self.go = (len(cost) < 5 or cost[-5] > lc)
-            if not self.go:
-                print('Stopt', self.__repr__())
-            return self.go
+            self.finished = True
+            log.info('Stop - No advance X - {}'.format(self.__repr__()))
+
+        # Other stopping criterion
         if self.stop == 'up5':
-            self.go = (len(cost) < 5 or cost[-5] > lc)
-            if not self.go:
-                print('Stop5', self.__repr__())
-            return self.go
+            self.finished = (len(cost) > 5 and cost[-5] < lc)
+            if self.finished:
+                log.info('Stop - Up 5 - {}'.format(self.__repr__()))
+            return self.finished
+        else:
+            return False
 
 
 class GD_Exception(Exception):

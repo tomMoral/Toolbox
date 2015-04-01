@@ -52,7 +52,8 @@ class NesterovMomentGradientDescent(_GradientDescent):
                                ' gradient computation function for grad')'''
 
     def __repr__(self):
-        return 'NesterovMomentDescent - '+str(self.restart)
+        return ('Nesterov Moment Descent' +
+                (' with Restart' if self.restart else ''))
 
     def p_update(self):
         '''Update the parameters with the nesterov momentum

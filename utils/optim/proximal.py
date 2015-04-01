@@ -2,6 +2,9 @@ import numpy as np
 
 
 from . import _GradientDescent
+from utils.logger import Logger
+
+log = Logger(name='ProximalDescent')
 
 
 class ProximalDescent(_GradientDescent):
@@ -16,12 +19,12 @@ class ProximalDescent(_GradientDescent):
         self.p_grad = [np.zeros(s) for s in problem.sizes]
         self.restart = restart
         self.f_theta = f_theta
-        '''if grad is not None:
-            raise GD_Exception('Nesterov accelerated gradient need a'
-                               ' gradient computation function for grad')'''
+        self.alpha = 1e-4
+        log.debug('Test debug')
 
     def __repr__(self):
-        return 'ProximalDescent - '+str(self.restart)
+        return ('Proximal Descent'  +
+                (' with Restart' if self.restart else ''))
 
     def p_update(self):
         '''Update the parameters with the nesterov momentum
@@ -31,12 +34,14 @@ class ProximalDescent(_GradientDescent):
         ak, ak1 = self.theta
         self.yn = [p+ak*(1/ak1-1)*pg for p, pg in zip(self.pt, self.p_grad)]
         grad = self.pb.grad(self.yn)
+
         self.pt = [self.pb.prox(y-ll*dy)
                    for ll, y, dy in zip(lr, self.yn, grad)]
 
         # Restart if needed
         lc = self.pb.cost(self.pt)
         if self.restart and lc > self.cost[-1]:
+            log.debug('Restart')
             self.yn = self.ppt
             grad = self.pb.grad(self.yn)
             self.pt = [self.pb.prox(y-lr*dy) for y, dy in zip(self.yn, grad)]

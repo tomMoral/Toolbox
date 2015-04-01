@@ -38,7 +38,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     try:
-        pb = Test(lr=.1)
+        pb = Test(lr=0)
 
         from optim import _GradientDescent
         from optim.momentGD import (MomentGradientDescent,
@@ -93,4 +93,4 @@ if __name__ == '__main__':
               ''.format((min(pdr.cost)-min(gdm.cost))/min(pdr.cost)))
         plt.show()
     finally:
-        log.end()
+        log.kill()
