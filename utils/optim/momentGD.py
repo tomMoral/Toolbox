@@ -10,7 +10,7 @@ class MomentGradientDescent(_GradientDescent):
                  restart=True, **kwargs):
         super(MomentGradientDescent, self).__init__(
             problem, decreasing_rate, **kwargs)
-        self.p_grad = [np.zeros(s) for s in problem.sizes]
+        self.p_grad = np.zeros(self.pt.shape)
         self.alpha_moment = alpha_moment
         self.restart = restart
 
@@ -27,15 +27,14 @@ class MomentGradientDescent(_GradientDescent):
         '''
         self.ppt = self.pt
         grad = self.pb.grad(self.pt)
-        self.p_grad = [dp + self.alpha_moment*pg
-                       for dp, pg in zip(grad, self.p_grad)]
+        self.p_grad = grad + self.alpha_moment*self.p_grad
         lr = self._get_lr()
-        self.pt = [p-l*dp for l, p, dp in zip(lr, self.pt, self.p_grad)]
+        self.pt = self.pt-lr*self.p_grad
         if self.restart and self.pb.cost(self.pt) > self.cost[-1]:
             self.pt = self.ppt
             grad = self.pb.grad(self.pt)
             self.p_grad = grad
-            self.pt = [p-lr*dp for p, dp in zip(self.pt, grad)]
+            self.pt = self.pt-lr*grad
 
 
 class NesterovMomentGradientDescent(_GradientDescent):
@@ -45,11 +44,8 @@ class NesterovMomentGradientDescent(_GradientDescent):
         super(NesterovMomentGradientDescent, self).__init__(
             problem, decreasing_rate, **kwargs)
         self.alpha_moment = alpha_moment
-        self.p_grad = [np.zeros(s) for s in problem.sizes]
+        self.p_grad = np.zeros(self.pt.shape)
         self.restart = restart
-        '''if grad is not None:
-            raise GD_Exception('Nesterov accelerated gradient need a'
-                               ' gradient computation function for grad')'''
 
     def __repr__(self):
         return ('Nesterov Moment Descent' +
@@ -62,18 +58,17 @@ class NesterovMomentGradientDescent(_GradientDescent):
         lr = self._get_lr()
 
         # Compute the intermediate step
-        self.yn = [p+pg for p, pg in zip(self.pt, self.p_grad)]
+        self.yn = self.pt + self.p_grad
 
         # Update
         grad = self.pb.grad(self.yn)
-        self.pt = [p-lr*dp for p, dp in zip(self.yn, grad)]
+        self.pt = self.yn-lr*grad
 
         # Restart criterion
         if self.restart and self.pb.cost(self.pt) > self.cost[-1]:
             self.pt = self.ppt
             grad = self.pb.grad(self.pt)
-            self.pt = [p-lr*dp for p, dp in zip(self.pt, grad)]
+            self.pt = self.pt-lr*grad
 
         # Save movement direction
-        self.p_grad = [self.alpha_moment*(p-pp)
-                       for p, pp in zip(self.pt, self.ppt)]
+        self.p_grad = self.alpha_moment*(self.pt-self.ppt)

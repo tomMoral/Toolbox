@@ -14,15 +14,13 @@ class ImplementationError(Exception):
 
 class _Problem(object):
     """Meta class to handle optimisation problem"""
-    def __init__(self, x0=None, sizes=None, **kwargs):
+    def __init__(self, x0=None, size=None):
         super(_Problem, self).__init__()
         self.x0 = x0
         if self.x0 is None:
-            assert sizes is not None, 'No size for the Problem'
-            if type(sizes) != list:
-                sizes = [sizes]
-            self.x0 = [np.random.normal(size=s) for s in sizes]
-        self.sizes = [x.shape for x in self.x0]
+            assert size is not None, 'No size for the Problem'
+            self.x0 = np.zeros(size)
+        self.sizes = self.x0.shape
 
     def cost(self, point):
         raise ImplementationError('cost not implemented', self.__class__)
@@ -50,12 +48,12 @@ if __name__ == '__main__':
             self.L = np.sum(A*A)
 
         def cost(self, pt):
-            res = self.A.dot(pt[0]) - self.b
+            res = self.A.dot(pt) - self.b
             res = res.dot(res)
-            return 0.5*res + self.lr*np.sum(abs(pt[0]))
+            return 0.5*res + self.lr*np.sum(abs(pt))
 
         def grad(self, pt):
-            return [self.A.T.dot(self.A.dot(pt[0]) - self.b)]
+            return [self.A.T.dot(self.A.dot(pt) - self.b)]
 
         def prox(self, pt):
             return np.sign(pt)*np.maximum(abs(pt)-self.lr, 0)

@@ -7,7 +7,8 @@ log = Logger('_GradientDescent')
 class _GradientDescent(object):
     """Class to hold gradient descent properties"""
     def __init__(self, problem, decreasing_rate='sqrt',
-                 stop='up5', tol=1e-10):
+                 stop='up5', tol=1e-10, graph_cost=None,
+                 name=None):
         '''Gradient Descent handeler
 
         Parameters
@@ -28,7 +29,9 @@ class _GradientDescent(object):
         self.stop = stop
         self.finished = False
         self.tol = tol
-        self.log_x = [np.copy(self.pt[0])]
+        self.log_x = [np.copy(self.pt)]
+        self.graph_cost = graph_cost
+        self.name = name if name is not None else self.__repr__()
 
     def __repr__(self):
         return '_GradientDescent'
@@ -45,9 +48,16 @@ class _GradientDescent(object):
             return True
         self.t += 1
         self.p_update()
-        self.cost += [self.pb.cost(self.pt)]
-        self.log_x += [np.copy(self.pt[0])]
-        return self._stop()
+        cc = self.pb.cost(self.pt)
+        self.cost += [cc]
+        self.log_x += [np.copy(self.pt)]
+        if self.graph_cost is not None:
+            log.graphical_cost(name=self.graph_cost, cost=cc,
+                               curve=self.name)
+        stop = self._stop()
+        if stop:
+            self.end()
+        return stop
 
     def p_update(self):
         '''Update the parameters
@@ -55,7 +65,7 @@ class _GradientDescent(object):
         grad = self.pb.grad(self.pt)
         self.p_grad = grad
         lr = self._get_lr()
-        self.pt = [p-l*dp for l, p, dp in zip(lr, self.pt, grad)]
+        self.pt = self.pt-lr*grad
 
     def _get_lr(self):
         '''Auxillary funciton, return the learning rate
@@ -68,8 +78,8 @@ class _GradientDescent(object):
         elif self.decreasing_rate == 'k2':
             lr *= 2/(self.t+2)
         elif hasattr(self.decreasing_rate, '__call__'):
-            lr = self.decreasing_rate(self.t)
-        return [lr]*len(self.pt)
+            lr *= self.decreasing_rate(self.t)
+        return lr
 
     def _stop(self):
         '''Implement stopping criterion
@@ -90,6 +100,7 @@ class _GradientDescent(object):
         if np.sum(np.abs(self.log_x[-1]-self.log_x[-2])) < self.tol:
             self.finished = True
             log.info('Stop - No advance X - {}'.format(self.__repr__()))
+            return self.finished
 
         # Other stopping criterion
         if self.stop == 'up5':
@@ -99,6 +110,12 @@ class _GradientDescent(object):
             return self.finished
         else:
             return False
+
+    def end(self):
+        if self.graph_cost is not None:
+            log.graphical_cost(name=self.graph_cost, curve=self.name,
+                               end=True)
+            self.graph_cost = None
 
 
 class GD_Exception(Exception):
