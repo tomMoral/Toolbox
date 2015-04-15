@@ -1,12 +1,14 @@
 from sys import stdout as out
 import numpy as np
 import logging
-from multiprocessing import Process, Pipe, Manager, Lock, Queue
+from multiprocessing import Process, Manager, Lock, Queue
+from queue import Empty
 from collections import defaultdict
 from time import time
 
 
-from . import STOP, PROGRESS, SAVE, COST, MODE
+from . import STOP, PROGRESS, SAVE, COST, LOG, PASS
+DEBUG = False
 
 
 class Handler(Process):
@@ -23,9 +25,10 @@ class Handler(Process):
         PROGRESS: name/max_iter/iteration
         SAVE: Object to save/optional nameFile
     """
-    def __init__(self, levl=logging.INFO, name='root', graph_update=0.005,
-                 default_line_style='-o', **kwargs):
+    def __init__(self, levl=logging.DEBUG, name='root',
+                 graph_update=0.4, default_line_style='-o', **kwargs):
         super(Handler, self).__init__(name='Log_process')
+        self.daemon = True
         # Get root logger
         self.log = logging.getLogger(name)
         # Add a default handler to print in console
@@ -37,9 +40,7 @@ class Handler(Process):
             self.log.addHandler(ch)
         self.last_writter = ''
         self.unfinished = False
-        self.pin, self.pout = Pipe()
         self.qin = Queue()
-        self._treat = self.qin.get
         self.manager = Manager()
         self.level = self.manager.Value('i', 0)
         self.lock = Lock()
@@ -47,14 +48,14 @@ class Handler(Process):
         self.graph = defaultdict(lambda: defaultdict(lambda: None))
         self.lst_time = defaultdict(lambda: 0)
         self.default_line_style = default_line_style
+        self.graph_update = graph_update
 
     def get_pin(self):
-        '''Return the logging pipe
+        '''Return the logging queue
         '''
         return self.qin
-        #return self.pin
 
-    def set_mode(self, levl=logging.INFO):
+    def set_mode(self, levl=logging.DEBUG):
         '''Change the logging level of this handler
         '''
         self._log(logging.INFO, 'LOGGER - Set mode: {}'
@@ -70,8 +71,10 @@ class Handler(Process):
             while True:
                 action, levl, entry = self._treat()
                 if action == STOP:
-                    self._log(logging.INFO, 'HANDLER - End properly')
+                    self._log(20, 'HANDLER - End properly')
                     break
+                elif action == PASS:
+                    continue
                 if levl < self.level:
                     continue
                 if action == PROGRESS:
@@ -80,22 +83,30 @@ class Handler(Process):
                     self._save(levl, **entry)
                 elif action == COST:
                     self._graph_cost(levl, **entry)
-                elif action == MODE:
-                    self.set_mode(entry)
-                else:
+                elif action == LOG:
                     self._log(levl, entry)
         except KeyboardInterrupt:
-            if 20 >= self.level:
-                self._log(20, 'LOGGER - KeyboardInterrupt')
+            if DEBUG:
+                self._log(10, 'HANDLER - KeyboardInterrupt')
         except:
-            if 40 >= self.level:
-                import sys
-                e, v = sys.exc_info()[:2]
-                self._log(40, '{} - {}'.format(e.__class__.__name__, v))
+            import sys
+            e, v = sys.exc_info()[:2]
+            self._log(40, '{} - {}'.format(e.__class__.__name__, v))
         finally:
-            if 10 >= self.level:
+            if DEBUG:
                 self._log(10, 'HANDELER - quit')
             return 0
+
+    def _treat(self):
+        try:
+            return self.qin.get(True, 0.1)
+        except Empty:
+            import os
+            ppid = os.getppid()
+            if ppid == 1:
+                return (STOP, None, None)
+            else:
+                return (PASS, None, None)
 
     def _beggin_line(self):
         if self.unfinished:
@@ -134,26 +145,36 @@ class Handler(Process):
         out.flush()
         self.last_writter = name
 
-    def _graph_cost(self, levl=logging.INFO, cost=0, iteration=1,
+    def _graph_cost(self, levl=logging.INFO, cost=0, iteration=None,
                     name='Cost', curve='cost', end=False, linestyle=None,
                     **kwargs):
         import matplotlib as mpl
         mpl.interactive(True)
         import matplotlib.pyplot as plt
         if end:
-            if 20 >= self.level:
-                self._log(20, 'End graphical cost follow up')
+            if DEBUG:
+                self._log(10, 'HANDLER - End graphical cost follow up')
             self._update_fig(name)
+            line = self.graph[name]['old'+curve]
+            if line is not None:
+                line.remove()
+            self.graph[name]['old'+curve] = self.graph[name][curve]
+            self.graph[name][curve] = None
             return
         # Update the graph
         line = self.graph[name][curve]
         if line is None:
+            if iteration is None:
+                iteration = 1
             plt.figure(name)
             line = plt.loglog([iteration], [cost], self.default_line_style,
                               label=curve, **kwargs)[0]
             plt.legend()
         else:
-            line.set_xdata(np.r_[line.get_xdata(), iteration])
+            x = line.get_xdata()
+            if iteration is None:
+                iteration = len(x)+1
+            line.set_xdata(np.r_[x, iteration])
             line.set_ydata(np.r_[line.get_ydata(), cost])
 
         if linestyle is not None:
@@ -162,7 +183,7 @@ class Handler(Process):
 
         self.graph[name][curve] = line
 
-        if time()-self.lst_time[name] >= 0.1:
+        if time()-self.lst_time[name] >= self.graph_update:
             self._update_fig(name)
 
     def _update_fig(self, name):
