@@ -43,6 +43,7 @@ class Logger(object):
             print('Fail to log', entry)
 
     def _format(self, msg, *args):
+        msg = str(msg)
         if len(args) > 0:
             msg += ' - ' + ' - '.join(
                 [str(a) for a in args])

@@ -82,7 +82,10 @@ class Handler(Process):
                 elif action == SAVE:
                     self._save(levl, **entry)
                 elif action == COST:
-                    self._graph_cost(levl, **entry)
+                    try:
+                        self._graph_cost(levl, **entry)
+                    except:
+                        pass
                 elif action == LOG:
                     self._log(levl, entry)
         except KeyboardInterrupt:
