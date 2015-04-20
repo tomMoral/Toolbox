@@ -7,12 +7,16 @@ log = Logger('WorkerSolver', 20)
 
 
 class WorkerSolver(Process):
-    def __init__(self, qin, qout, id_w=0, seed=None, **param):
+    def __init__(self, qin, qout, id_w=0, seed=None, debug=0,
+                 **param):
         self.qin = qin
         self.qout = qout
-        self.solver = Solver(**param)
         self.id = id_w
         self.seed = seed
+        if debug:
+            log.set_level(10)
+            debug -= 1
+        self.solver = Solver(debug=debug, **param)
         super(WorkerSolver, self).__init__()
 
     def run(self):

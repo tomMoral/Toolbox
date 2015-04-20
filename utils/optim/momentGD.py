@@ -1,4 +1,6 @@
 import numpy as np
+from utils.logger import Logger
+log = Logger('MomentGD')
 
 
 from . import _GradientDescent
@@ -7,9 +9,12 @@ from . import _GradientDescent
 class MomentGradientDescent(_GradientDescent):
     """Gradient Descent with moment update"""
     def __init__(self, problem, decreasing_rate='', alpha_moment=0.9,
-                 restart=True, **kwargs):
+                 restart=True, debug=0, **kwargs):
+        if debug:
+            debug -= 1
+            log.set_level(10)
         super(MomentGradientDescent, self).__init__(
-            problem, decreasing_rate, **kwargs)
+            problem, decreasing_rate, debug=debug, **kwargs)
         self.p_grad = np.zeros(self.pt.shape)
         self.alpha_moment = alpha_moment
         self.restart = restart
@@ -40,9 +45,12 @@ class MomentGradientDescent(_GradientDescent):
 class NesterovMomentGradientDescent(_GradientDescent):
     """Gradient Descent with the nesterov momentum"""
     def __init__(self, problem, decreasing_rate='', alpha_moment=0.9,
-                 restart=False, **kwargs):
+                 restart=False, debug=0, **kwargs):
+        if debug:
+            debug -= 1
+            log.set_level(10)
         super(NesterovMomentGradientDescent, self).__init__(
-            problem, decreasing_rate, **kwargs)
+            problem, decreasing_rate, debug=debug, **kwargs)
         self.alpha_moment = alpha_moment
         self.p_grad = np.zeros(self.pt.shape)
         self.restart = restart

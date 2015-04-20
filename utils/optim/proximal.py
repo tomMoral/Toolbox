@@ -4,22 +4,26 @@ import numpy as np
 from . import _GradientDescent
 from utils.logger import Logger
 
-log = Logger(name='ProximalDescent', levl=20)
+log = Logger(name='ProximalDescent')
 
 
 class ProximalDescent(_GradientDescent):
     """Gradient Descent with the nesterov momentum"""
-    def __init__(self, problem, decreasing_rate='', f_theta='fista',
-                 restart=False, **kwargs):
+    def __init__(self, problem, decreasing_rate='', f_theta='k2',
+                 restart=False, debug=0, **kwargs):
         self.restart = restart
+        if debug > 0:
+            debug -= 1
+            log.set_level(10)
         super(ProximalDescent, self).__init__(
-            problem, decreasing_rate=decreasing_rate, **kwargs)
+            problem, decreasing_rate=decreasing_rate,
+            debug=debug, **kwargs)
         self.theta = [1, 1]
         if type(f_theta) is float:
             self.theta = [1-f_theta]*2
         self.p_grad = np.zeros(self.pt.shape)
         self.f_theta = f_theta
-        self.alpha = 1e-4
+        self.alpha = 1/self.pb.L
 
     def __repr__(self):
         return ('Proximal Descent' +
@@ -46,7 +50,7 @@ class ProximalDescent(_GradientDescent):
             log.debug('Restart')
             self.yn = self.ppt
             grad = self.pb.grad(self.yn)
-            self.pt = self.pb.prox(self.yn-lr*grad, lmbd/lr)
+            self.pt = self.pb.prox(self.yn-lr*grad, lmbd*lr)
 
         #Update momentum information
         self.p_grad = self.pt-self.ppt

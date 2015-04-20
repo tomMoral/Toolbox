@@ -21,6 +21,7 @@ class _Problem(object):
             assert size is not None, 'No size for the Problem'
             self.x0 = np.zeros(size)
         self.sizes = self.x0.shape
+        self.L = 10
 
     def cost(self, point):
         raise ImplementationError('cost not implemented', self.__class__)

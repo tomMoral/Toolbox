@@ -1,14 +1,14 @@
 from math import sqrt
 import numpy as np
 from utils.logger import Logger
-log = Logger('_GradientDescent')
+log = Logger('_GD')
 
 
 class _GradientDescent(object):
     """Class to hold gradient descent properties"""
     def __init__(self, problem, decreasing_rate='sqrt',
                  stop='up5', tol=1e-10, graph_cost=None,
-                 name=None):
+                 name=None, debug=0):
         '''Gradient Descent handeler
 
         Parameters
@@ -20,6 +20,8 @@ class _GradientDescent(object):
         decreasing_rate: {'sqrt', 'linear'} deacreasing rate
             for the learning rate
         '''
+        if debug > 0:
+            log.set_level(10)
         self.pb = problem
         self.alpha = 4/problem.L
         self.decreasing_rate = decreasing_rate

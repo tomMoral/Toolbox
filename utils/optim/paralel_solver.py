@@ -9,10 +9,14 @@ log = Logger('//Solver', 20)
 
 class ParalelSolver(object):
     """Paralell sparse coding"""
-    def __init__(self, n_jobs=4, **kwargs):
+    def __init__(self, n_jobs=4, debug=0, **kwargs):
         super(ParalelSolver, self).__init__()
         self.n_jobs = n_jobs
         self.param = kwargs
+        if debug:
+            log.set_level(10)
+            debug -= 1
+        self.debug = debug
 
     def solve(self, problems, **kwargs):
         if type(problems) not in [list, ndarray]:
@@ -27,6 +31,7 @@ class ParalelSolver(object):
         slaves = []
         for i in range(self.n_jobs):
             slaves += [WorkerSolver(qin, qout, id_w=i,
+                                    debug=self.debug,
                                     **self.param)]
             qin.put((None, None))
             slaves[-1].start()

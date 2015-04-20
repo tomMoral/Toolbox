@@ -9,11 +9,13 @@ log = Logger(name='Solver', levl=20)
 class Solver(object):
     """Encode a signal in the convolutional dictionary"""
     def __init__(self, optim=_GradientDescent, max_time=None,
-                 max_iter=1e6, **kwargs):
+                 max_iter=1e6, debug=0, **kwargs):
         self.optim = optim
         self.param = kwargs
         self.max_iter = max_iter
         self.max_time = max_time
+        if debug:
+            log.set_level(10)
 
     def solve(self, pb, **kwargs):
         self.pb = pb
@@ -25,9 +27,9 @@ class Solver(object):
         while not finished and not self._stop():
             finished = solver.update()
             self.iter += 1
+        self._end()
         self.pt = solver.pt
         self.cost = solver.cost
-        solver.end()
         return self.pt
 
     def _stop(self):
@@ -37,11 +39,14 @@ class Solver(object):
                 t/self.max_time > n/m):
             n, m = t, self.max_time
         if n >= m:
-            log.progress(levl=10, name='ConvSparseCoder', iteration=m,
-                         max_iter=m)
-            log.info('Time: {:.3}s; Iteration: {}'
-                     ''.format(t, self.iter))
             return True
         log.progress(levl=10, name='ConvSparseCoder', iteration=n,
                      max_iter=m)
         return False
+
+    def _end(self):
+        log.progress(levl=10, name='ConvSparseCoder', iteration=1,
+                     max_iter=1)
+        t = time() - self.start_time
+        log.info('Time: {:.3}s; Iteration: {}'
+                 ''.format(t, self.iter))
