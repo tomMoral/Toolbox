@@ -9,7 +9,7 @@ log = Logger(name='ProximalDescent')
 
 class ProximalDescent(_GradientDescent):
     """Gradient Descent with the nesterov momentum"""
-    def __init__(self, problem, decreasing_rate='', f_theta='k2',
+    def __init__(self, problem, decreasing_rate='', f_theta='boyd',
                  restart=False, debug=0, **kwargs):
         self.restart = restart
         if debug > 0:
@@ -21,7 +21,7 @@ class ProximalDescent(_GradientDescent):
         self.theta = [1, 1]
         if type(f_theta) is float:
             self.theta = [1-f_theta]*2
-        self.p_grad = np.zeros(self.pt.shape)
+        self.p_grad = np.zeros(self.pb.pt.shape)
         self.f_theta = f_theta
         self.alpha = 1/self.pb.L
 
@@ -32,31 +32,35 @@ class ProximalDescent(_GradientDescent):
     def p_update(self):
         '''Update the parameters with the nesterov momentum
         '''
-        self.ppt = self.pt
+        self.ppt = self.pb.pt
 
         lr = self._get_lr()
         lmbd = self.pb.lmbd
         ak, ak1 = self.theta
-        self.yn = self.pt+ak*(1/ak1-1)*self.p_grad
+        self.yn = self.pb.pt+ak*(1/ak1-1)*self.p_grad
         grad = self.pb.grad(self.yn)
 
-        self.pt = self.pb.prox(self.yn-lr*grad, lmbd*lr)
+        self.pb._update(self.pb.prox(self.yn-lr*grad, lmbd*lr))
         log.debug('Grad: {}'.format(np.max(grad)))
         log.debug('lr: {}'.format(lr))
 
         # Restart if needed
-        lc = self.pb.cost(self.pt)
-        if self.restart and lc > self.cost[-1]:
+        res_cond = (self.yn - self.pb.pt).dot((self.pb.pt - self.ppt).T).sum()
+        if self.restart and res_cond > 0:
             log.debug('Restart')
             self.yn = self.ppt
             grad = self.pb.grad(self.yn)
-            self.pt = self.pb.prox(self.yn-lr*grad, lmbd*lr)
+            self.pb._update(self.pb.prox(self.yn-lr*grad, lmbd*lr))
 
         #Update momentum information
-        self.p_grad = self.pt-self.ppt
-        self.theta = [self._theta(), ak]
+        self.p_grad = self.pb.pt-self.ppt
+        self.theta = [self._theta(ak), ak]
+        return np.sum(self.p_grad*self.p_grad)
 
-    def _theta(self):
+    def _theta(self, ak):
+        if self.f_theta == 'boyd':
+            ak2 = ak*ak
+            return (np.sqrt(ak2*ak2+4*ak2)-ak2)/2
         if self.f_theta == 'k2':
             return 2/(self.t+3)
         elif type(self.f_theta) == float:
