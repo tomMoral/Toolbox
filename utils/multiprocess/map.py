@@ -55,7 +55,7 @@ def map_grouping(fun, l1, njobs=0, **kwargs):
         for i in range(N-1):
             idp, r = qout.get(True, 5)
             resultat[idp] = r
-            log.progress(max_iter=N, iteration=i,
+            log.progress(i_max=N, iteration=i,
                          name='Scoring gouping')
         for s in slaves:
             s.join()

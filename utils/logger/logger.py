@@ -19,7 +19,7 @@ class Logger(logging.Logger):
         self.last_wr = ''
         self.is_prog = False
 
-    def progress(self, name, i, max_iter, levl=logging.INFO):
+    def progress(self, name, i, i_max, levl=logging.INFO):
         if self.level > levl:
             return
         if self.last_wr != name:
@@ -29,8 +29,8 @@ class Logger(logging.Logger):
             out.write('{} - {} - '.format(logging.getLevelName(levl), name))
             out.write(' '*7)
             self.last_wr = name
-        out.write('\b'*7 + '{:7.2%}'.format(i/max_iter))
-        if i == max_iter-1:
+        out.write('\b'*7 + '{:7.2%}'.format(i/i_max))
+        if i == i_max-1:
             out.write('\r{} - {} - Done   '
                       ''.format(logging.getLevelName(levl), name))
             out.write('\n')
@@ -93,7 +93,7 @@ class Logger(logging.Logger):
 if __name__ == '__main__':
     log = Logger(levl=logging.DEBUG)
 
-    max_iter = 1000000
+    i_max = 1000000
 
-    for i in range(max_iter):
-        log.progress('Counter', i, max_iter)
+    for i in range(i_max):
+        log.progress('Counter', i, i_max)

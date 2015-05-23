@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 
 
-from . import STOP, LOG, PROGRESS, SAVE, MODE, COST
+from . import STOP, LOG, PROGRESS, SAVE, COST, OBJ
 from .handler_p import Handler
 
 
@@ -21,7 +21,6 @@ class Logger(object):
 
     def restart():
         if Logger.output is None or not Logger.output.is_alive():
-            print('new output')
             Logger.output = Handler(levl=10)
             Logger.output.start()
             Logger._alive = True
@@ -95,23 +94,28 @@ class Logger(object):
         if self.level <= 50:
             self._log((LOG, 50, self._format(msg, *args)))
 
-    def progress(self, iteration=0, max_iter=100, name='Progress',
+    def progress(self, iteration=0, i_max=100, name='Progress',
                  levl=logging.INFO, *args, **kwargs):
         '''Log a progression, typically for a loop,
 
         Parameters
         ----------
         iteration: Avancement of the loop
-        max_iter: Total # of iteration
+        i_max: Total # of iteration
         name: Name of the loop, to diferentiate the loops
         levl: Level of the log
         '''
         if self.name != '':
             name = self.name + ' - ' + name
         if self.level <= levl:
-            kwargs.update(dict(iteration=iteration, max_iter=max_iter,
+            kwargs.update(dict(iteration=iteration, i_max=i_max,
                                name=name))
             self._log((PROGRESS, levl, kwargs))
+
+    def log_obj(self, levl=20, name='', obj=None, **kwargs):
+        if self.level <= levl and name != '' and obj is not None:
+            kwargs.update(dict(name=name, obj=obj))
+            self._log((OBJ, levl, kwargs))
 
     def graphical_cost(self, cost=0, iteration=None, name='Cost',
                        levl=logging.INFO, end=False, **kwargs):
@@ -133,12 +137,16 @@ class Logger(object):
         if self.level <= levl:
             self._log((SAVE, levl, kwargs))
 
+    def process_queue(self):
+        import time
+        while Logger.output.qin.qsize() != 0:
+            time.sleep(0.4)
 
 if __name__ == '__main__':
     log = Logger()
-    max_iter = 1000000
+    i_max = 1000000
 
-    for i in range(max_iter):
+    for i in range(i_max):
         log.graphical_cost(cost=1/(i+1), n_iteration=1)
 
     log.end()

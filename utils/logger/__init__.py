@@ -6,5 +6,6 @@ PROGRESS = 3
 SAVE = 4
 COST = 5
 MODE = 6
+OBJ = 7
 
 from .logger_p import Logger

@@ -62,7 +62,7 @@ if __name__ == '__main__':
                   pdr2.update()]
             i += 1
             log.progress(name='Gradient Optimisation', iteration=i,
-                         max_iter=100)
+                         i_max=100)
             if args.log_cost:
                 log.graphical_cost(name='Test', cost=gd.cost[-1], iteration=i,
                                    curve='GD')
