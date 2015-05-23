@@ -44,7 +44,7 @@ class ParalelSolver(object):
             idp, z, s = qout.get()
             self.solutions[idp] = z
             self.scores[idp] = s
-            log.progress(name='Solver', iteration=i+1, max_iter=N_iter)
+            log.progress(name='Solver', iteration=i+1, i_max=N_iter)
 
         for s in slaves:
             s.join()
