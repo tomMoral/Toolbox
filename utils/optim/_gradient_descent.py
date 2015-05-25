@@ -39,10 +39,7 @@ class _GradientDescent(object):
         self.alpha = 1/problem.L
         self.decreasing_rate = decreasing_rate
         self.stop = stop
-        self.finished = False
         self.tol = tol
-        self.iteration = 0
-        self.t = 0
 
         # Logging system
         self.logging = logging
@@ -50,7 +47,6 @@ class _GradientDescent(object):
             self.log_rate = get_log_rate(log_rate)
         else:
             self.log_rate = get_log_rate('none')
-        self.next_log = self.log_rate(self.iteration)
         self.i_max = i_max
         self.t_max = t_max
 
@@ -139,12 +135,16 @@ class _GradientDescent(object):
     def start(self):
         log.info('Start', self)
         self.t0 = time()
+        self.iteration = 1
+        self.t = 0
+        self.finished = False
         self._init_algo()
         if self.logging:
             log.log_obj(name='cost'+str(self.id), obj=np.copy(self.pb.pt),
                         iteration=self.iteration+1, fun=self.pb.cost,
                         graph_cost=self.graph_cost, time=0)
         self.t_start = time()
+        self.next_log = self.log_rate(0)
 
     def end(self):
         if self.logging:
