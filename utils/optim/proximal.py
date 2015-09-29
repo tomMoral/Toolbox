@@ -41,8 +41,6 @@ class ProximalDescent(_GradientDescent):
         grad = self.pb.grad(self.yn)
 
         self.pb._update(self.pb.prox(self.yn-lr*grad, lmbd*lr))
-        log.debug('Grad: {}'.format(np.max(grad)))
-        log.debug('lr: {}'.format(lr))
 
         # Restart if needed
         res_cond = (self.yn - self.pb.pt).dot((self.pb.pt - self.ppt).T).sum()

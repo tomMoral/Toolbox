@@ -114,13 +114,12 @@ class _AlternateDescent(object):
 
     def start(self):
         log.info('Start', self)
-        self.t0 = time()
+        self.t_start = time()
         self._init_algo()
         if self.logging:
             log.log_obj(name='cost'+str(self.id), obj=np.copy(self.pt),
                         iteration=self.iteration+1, fun=self.pb.cost,
                         graph_cost=self.graph_cost, time=time()-self.t_start)
-        self.t_start = time()
 
     def end(self):
         if self.logging:
@@ -129,4 +128,4 @@ class _AlternateDescent(object):
                         graph_cost=self.graph_cost, time=self.t)
         log.info('End for {}'.format(self),
                  'iteration {}, time {:.4}s'.format(self.iteration, self.t))
-        log.info('Total time: {:.4}s'.format(time()-self.t0))
+        log.info('Total time: {:.4}s'.format(time()-self.t_start))
