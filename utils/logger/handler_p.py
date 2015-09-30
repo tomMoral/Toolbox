@@ -72,26 +72,29 @@ class Handler(Process):
         try:
             while True:
                 action, levl, entry = self._treat()
-                if action == STOP:
-                    self._log(20, 'HANDLER - End properly')
-                    break
-                elif action == PASS:
-                    continue
-                if levl < self.level:
-                    continue
-                if action == PROGRESS:
-                    self._progress(levl, **entry)
-                elif action == SAVE:
-                    self._save(levl, **entry)
-                elif action == COST:
-                    try:
-                        self._graph_cost(**entry)
-                    except:
-                        pass
-                elif action == LOG:
-                    self._log(levl, entry)
-                elif action == OBJ:
-                    self._log_obj(**entry)
+                try:
+                    if action == STOP:
+                        self._log(20, 'HANDLER - End properly')
+                        break
+                    elif action == PASS:
+                        continue
+                    if levl < self.level:
+                        continue
+                    if action == PROGRESS:
+                        self._progress(levl, **entry)
+                    elif action == SAVE:
+                        self._save(levl, **entry)
+                    elif action == COST:
+                        try:
+                            self._graph_cost(**entry)
+                        except:
+                            pass
+                    elif action == LOG:
+                        self._log(levl, entry)
+                    elif action == OBJ:
+                        self._log_obj(**entry)
+                except ValueError:
+                    print("WARNING - Fail to log", action, levl, entry)
         except KeyboardInterrupt:
             if DEBUG:
                 self._log(10, 'HANDLER - KeyboardInterrupt')
