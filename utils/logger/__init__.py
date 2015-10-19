@@ -7,5 +7,6 @@ SAVE = 4
 COST = 5
 MODE = 6
 OBJ = 7
+LEVEL = 8
 
 from .logger_p import Logger

@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 
 
-from . import STOP, LOG, PROGRESS, SAVE, COST, OBJ
+from . import STOP, LOG, PROGRESS, SAVE, COST, OBJ, LEVEL
 from .handler_p import Handler
 
 
@@ -19,9 +19,11 @@ class Logger(object):
     references = 0
     _alive = False
 
+    @staticmethod
     def restart():
         if Logger.output is None or not Logger.output.is_alive():
-            Logger.output = Handler(levl=10)
+            process = multiprocessing.current_process()
+            Logger.output = Handler(levl=10, process=process)
             Logger.output.start()
             Logger._alive = True
         return Logger.output.get_pin()
@@ -30,10 +32,16 @@ class Logger(object):
         '''Create a basic Logger and add a output handler
         '''
         super(Logger, self).__init__()
-        self.level = levl
         Logger.references += 1
         self.qin = Logger.restart()
         self.name = name
+        self.running = True
+        self.set_level(levl)
+
+    def __del__(self):
+        print('Delete')
+        if self.running:
+            self.end()
 
     def _log(self, entry):
         try:
@@ -54,6 +62,8 @@ class Logger(object):
         '''Change the logging level of the logger and the output handler
         '''
         self.level = levl
+        if self.level < 10:
+            self.qin.put((LEVEL, self.level, None))
 
     def end(self):
         '''Finish to handle the log entry and stop the output handler
@@ -63,6 +73,7 @@ class Logger(object):
             self._log((STOP, None, None))
             Logger.output.join()
             Logger._alive = False
+        self.running = False
 
     def kill(self):
         if Logger._alive:
@@ -70,6 +81,7 @@ class Logger(object):
             self._log((STOP, None, None))
             Logger.output.join()
             Logger._alive = False
+        self.running = False
 
     def is_alive(self):
         return self._alive
@@ -141,12 +153,3 @@ class Logger(object):
         import time
         while Logger.output.qin.qsize() != 0:
             time.sleep(0.4)
-
-if __name__ == '__main__':
-    log = Logger()
-    i_max = 1000000
-
-    for i in range(i_max):
-        log.graphical_cost(cost=1/(i+1), n_iteration=1)
-
-    log.end()
