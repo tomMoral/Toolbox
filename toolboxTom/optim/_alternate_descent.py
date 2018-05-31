@@ -2,7 +2,7 @@ import numpy as np
 from math import sqrt
 from time import time
 
-from utils.logger import Logger
+from toolbox.logger import Logger
 log = Logger('_GD', 10)
 
 from . import get_log_rate, _GradientDescent

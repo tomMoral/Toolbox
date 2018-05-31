@@ -1,9 +1,10 @@
 import numpy as np
 import sys
-from utils.logger import Logger
+from toolbox.logger import Logger
 import multiprocessing
 from multiprocessing import Process, Queue
 log = Logger(name='map')
+log.set_level(0)
 
 
 class WorkerGroups(Process):
@@ -21,7 +22,12 @@ class WorkerGroups(Process):
             log.debug('Worker {} - |qin| = {}'
                       ''.format(self.id, self.qin.qsize()))
             params = dict(p=p, **self.args)
-            self.qout.put((idp, self.fun(**params)))
+            try:
+                self.qout.put((idp, self.fun(**params)))
+            except:
+                import traceback
+                msg = traceback.format_exc()
+                print(msg)
             idp, p = self.qin.get()
         log.debug('Worker {} finished'.format(self.id))
         return 0
@@ -31,7 +37,7 @@ def map_grouping(fun, l1, njobs=0, **kwargs):
 
     if njobs < 1:
         cc = multiprocessing.cpu_count()
-        njobs = min(cc-1, cc-njobs)
+        njobs = min(cc-1, cc+njobs)
 
     # Init loop variables
     N = len(l1)
@@ -48,8 +54,9 @@ def map_grouping(fun, l1, njobs=0, **kwargs):
             qin.put((None, None))
             slaves += [WorkerGroups(qin, qout, fun, id_w=i, **kwargs)]
             slaves[-1].start()
+        print(qin.qsize())
 
-        idp, r = qout.get(True, 5)
+        idp, r = qout.get(True, 10)
         resultat = np.empty(N, dtype=type(r))
         resultat[idp] = r
         for i in range(N-1):
@@ -60,8 +67,10 @@ def map_grouping(fun, l1, njobs=0, **kwargs):
         for s in slaves:
             s.join()
     except:
-        e, v = sys.exc_info()[:2]
-        log.error('Map - {} - {}'.format(e.__class__.__name__, v))
+        import traceback
+        msg = traceback.format_exc()
+        log.error('Map - {}'.format('fail'))
+        log.error('-'*79+'\n'+msg+'\n'+'-'*79)
     finally:
         for s in slaves:
             if s.is_alive():

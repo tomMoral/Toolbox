@@ -1,7 +1,7 @@
 from sys import stdout as out
 import numpy as np
 import logging
-from multiprocessing import Process, Manager, Lock, Queue
+from multiprocessing import Process, Manager, Queue
 from queue import Empty
 from collections import defaultdict
 from time import time
@@ -11,7 +11,7 @@ mpl.interactive(True)
 
 
 from . import STOP, PROGRESS, SAVE, COST, LOG, PASS, OBJ, LEVEL
-DEBUG = True
+from . import DEBUG
 
 
 class Handler(Process):
@@ -72,8 +72,9 @@ class Handler(Process):
     def set_mode(self, levl=logging.DEBUG):
         '''Change the logging level of this handler
         '''
-        self._log(logging.INFO, 'LOGGER - Set mode: {}'
-                  ''.format(levl))
+        if DEBUG:
+            self._log(10, 'HANDLER - Set mode: {}'
+                      ''.format(levl))
         self.log.setLevel(levl)
         for ch in self.log.handlers:
             ch.setLevel(levl)
@@ -82,11 +83,13 @@ class Handler(Process):
     def run(self):
         '''Handler loop'''
         if DEBUG or self.level < 10:
-            self._log(10, 'HANDLER - Start properly')
+            self._log(10, 'HANDLER - Start properly with level {}'
+                      ''.format(self.level))
         while True:
             try:
-                action, levl, entry = self._treat()
+                action, levl, entry, logger = self._treat()
                 if action == STOP:
+                    print('Got stop')
                     break
                 elif action == PASS:
                     continue
@@ -111,6 +114,8 @@ class Handler(Process):
                 elif action == OBJ:
                     self._log_obj(**entry)
             except ValueError:
+                import traceback
+                msg = traceback.format_exc()
                 self._log(40, "HANDLER - Fail to log {}, {}, {}"
                           "".format(action, levl, entry))
             except KeyboardInterrupt:
@@ -118,19 +123,24 @@ class Handler(Process):
             except:
                 import traceback
                 msg = traceback.format_exc()
-                self._log(40, 'HANDLER\n {}'.format(msg))
+                msg_form = 'HANDLER\n'
+                msg_form += '='*79+'\n'
+                msg_form += msg+'\n'+'='*79+'\n'
+                self._log(40, msg_form)
         if DEBUG or self.level < 10:
             self._log(10, 'HANDELER - Clean quit')
         return 0
 
     def _treat(self):
         try:
-            entry = self.qin.get(True, 0.1)
-            if self.level < logging.DEBUG:
-                self._log(10, 'HANDLER - got entry {}'.format(entry))
+            entry = self.qin.get(True, 2)
+            if DEBUG or self.level < logging.DEBUG:
+                if entry[0] != OBJ:
+                    self._log(10, 'HANDLER - Got entry {}'
+                                  ''.format(entry))
             return entry
         except Empty:
-            return (PASS, None, None)
+            return PASS, None, None, None
 
     def _begin_line(self):
         if self.unfinished:
@@ -171,10 +181,10 @@ class Handler(Process):
 
     def _graph_cost(self, cost=1, iteration=None,
                     name='Cost', curve='cost', end=False, linestyle=None,
-                    **kwargs):
+                    scale='log', **kwargs):
         import matplotlib.pyplot as plt
         if end:
-            if DEBUG:
+            if DEBUG or self.level < 10:
                 self._log(10, 'HANDLER - End graphical cost follow up')
             self._update_fig(name)
             line = self.graph[name]['old'+curve]
@@ -191,8 +201,14 @@ class Handler(Process):
                 iteration = 1
             # Select the
             plt.figure(name)
-            line = plt.plot([iteration], [cost], self.default_line_style,
-                            label=curve, **kwargs)[0]
+            if scale == 'log':
+                line = plt.loglog([iteration], [cost],
+                                  self.default_line_style,
+                                  label=curve, **kwargs)[0]
+            else:
+                line = plt.plot([iteration], [cost],
+                                self.default_line_style,
+                                label=curve, **kwargs)[0]
             plt.legend()
         else:
             x = line.get_xdata()

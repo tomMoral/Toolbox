@@ -1,7 +1,7 @@
 from time import time
 
 
-from utils.logger import Logger
+from toolbox.logger import Logger
 from . import _GradientDescent
 log = Logger(name='Solver', levl=20)
 

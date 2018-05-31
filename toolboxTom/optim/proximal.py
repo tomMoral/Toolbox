@@ -2,7 +2,7 @@ import numpy as np
 
 
 from . import _GradientDescent
-from utils.logger import Logger
+from toolbox.logger import Logger
 
 log = Logger(name='ProximalDescent')
 

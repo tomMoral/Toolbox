@@ -1,7 +1,7 @@
 import numpy as np
 
 from optim.problem import _Problem
-from utils.logger import Logger
+from toolbox.logger import Logger
 log = Logger()
 
 

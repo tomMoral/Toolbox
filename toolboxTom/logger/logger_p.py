@@ -5,6 +5,8 @@ import multiprocessing
 from . import STOP, LOG, PROGRESS, SAVE, COST, OBJ, LEVEL
 from .handler_p import Handler
 
+from . import DEBUG
+
 
 class Logger(object):
     """Asynchronous Logger
@@ -33,21 +35,25 @@ class Logger(object):
         '''
         super(Logger, self).__init__()
         Logger.references += 1
-        self.qin = Logger.restart()
         self.name = name
         self.running = True
         self.set_level(levl)
 
     def __del__(self):
-        print('Delete')
         if self.running:
             self.end()
 
     def _log(self, entry):
         try:
-            self.qin.put(entry, False)
+            qin = Logger.restart()
+            assert type(entry) == tuple
+            assert len(entry) == 3
+            qin.put(entry+(self.name,), False)
         except TimeoutError:
-            print('Fail to log', entry)
+            print('== ERROR - LOGGER - Fail to log', entry)
+        except AssertionError:
+            print('== ERROR - LOGGER - Bad entry in logger {}'
+                  '\n'.format(self.name))
 
     def _format(self, msg, *args):
         msg = str(msg)
@@ -62,14 +68,17 @@ class Logger(object):
         '''Change the logging level of the logger and the output handler
         '''
         self.level = levl
-        if self.level < 10:
-            self.qin.put((LEVEL, self.level, None))
+        if self.level <= 10:
+            self._log((LEVEL, self.level, None))
+        if DEBUG:
+            self.debug('Set level to {}'.format(levl))
 
     def end(self):
         '''Finish to handle the log entry and stop the output handler
         '''
         Logger.references -= 1
-        if Logger.references == 0 and Logger._alive:
+        if (Logger.references == 0 and Logger._alive and
+                Logger.output.is_alive()):
             self._log((STOP, None, None))
             Logger.output.join()
             Logger._alive = False

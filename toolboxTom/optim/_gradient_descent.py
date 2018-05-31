@@ -2,8 +2,8 @@ import numpy as np
 from math import sqrt
 from time import time
 
-from utils.logger import Logger
-log = Logger()
+from ..logger import Logger
+log = Logger('GD')
 
 from . import get_log_rate
 
@@ -16,7 +16,7 @@ class _GradientDescent(object):
     def __init__(self, problem, decreasing_rate='sqrt',
                  stop='', tol=1e-10, graphical_cost=None,
                  name=None, debug=0, logging=False,
-                 log_rate='log1.6', i_max=1000, t_max=40):
+                 log_rate='log1.6', i_max=1e6, t_max=40):
         '''Gradient Descent handeler
 
         Parameters
@@ -28,15 +28,35 @@ class _GradientDescent(object):
         decreasing_rate: {'sqrt', 'linear'} deacreasing rate
             for the learning rate
         '''
+        log.set_level(max(3-debug, 1)*10)
+        debug = max(debug-1, 0)
 
         self.id = _GradientDescent.id_gd
         _GradientDescent.id_gd += 1
 
+        self.pb = problem
+        self.decreasing_rate = decreasing_rate
+        self.stop = stop
+        self.tol = tol
+
+        # Logging system
+        self.logging = logging
+        self.log_rate = get_log_rate(log_rate)
+        self.i_max = i_max
+        self.t_max = t_max
+
+        self.name = name if name is not None else '_GD' + str(self.id)
+        self.graph_cost = None
+
+        self.reset()
+
+    def set_param(self, decreasing_rate='sqrt',
+                  stop='', tol=1e-10, graphical_cost=None,
+                  name=None, debug=0, logging=False,
+                  log_rate='log1.6', i_max=1000, t_max=40):
         if debug > 0:
             log.set_level(10)
 
-        self.pb = problem
-        self.alpha = 1/problem.L
         self.decreasing_rate = decreasing_rate
         self.stop = stop
         self.tol = tol
@@ -52,7 +72,11 @@ class _GradientDescent(object):
         if graphical_cost is not None:
             self.graph_cost = dict(name=graphical_cost, curve=self.name)
 
-        self.reset()
+    def solve(self, problem, **kwargs):
+        self.pb = problem
+        self.alpha = 1 / problem.L
+        self.change_param(**kwargs)
+        return self
 
     def __repr__(self):
         return self.name
@@ -76,9 +100,10 @@ class _GradientDescent(object):
         dz = self.p_update()
         self.t = time() - self.t_start
         if self.iteration >= self.next_log and self.logging:
-            log.log_obj(name='cost'+str(self.id), obj=np.copy(self.pb.pt),
+            log.log_obj(name='cost' + str(self.id), obj=np.copy(self.pb.pt),
                         iteration=self.iteration, fun=self.pb.cost,
-                        graph_cost=self.graph_cost, time=self.t)
+                        graph_cost=self.graph_cost, time=self.t,
+                        levl=50)
             self.next_log = self.log_rate(self.iteration)
         stop = self._stop(dz)
         if stop:
@@ -114,6 +139,8 @@ class _GradientDescent(object):
 
         if self.iteration >= self.i_max or self.t >= self.t_max:
             self.finished = True
+            log.info("{} - Stop - Reach timeout or maxiter"
+                     "".format(self.__repr__()))
             return True
 
         if self.stop == 'none':
@@ -142,14 +169,14 @@ class _GradientDescent(object):
         self.next_log = self.log_rate(self.iteration)
 
     def end(self):
+        self.runtime = time()-self.t_start
         if self.logging:
             log.log_obj(name='cost'+str(self.id), obj=self.pb.pt,
                         iteration=self.iteration, fun=self.pb.cost,
                         graph_cost=self.graph_cost, time=self.t)
-        log.info(self.__repr__(), 'End - iteration {}, time {:.4}s'
-                 ''.format(self.iteration, self.t))
-        self.runtime = time()-self.t_start
-        log.info('Total time: {:.4}s'.format(self.runtime))
+        log.debug(self.__repr__(), 'End - iteration {}, time {:.4}s'
+                  ''.format(self.iteration, self.t))
+        log.debug('Total time: {:.4}s'.format(self.runtime))
 
     def reset(self):
         # initiate loop variables
@@ -157,3 +184,10 @@ class _GradientDescent(object):
         self.iteration = 0
         self.t_start = time()
         self.t = 0
+
+    def fit(self, pb):
+        self.pb = pb
+        self.reset()
+        stop = False
+        while not stop:
+            stop = self.update()

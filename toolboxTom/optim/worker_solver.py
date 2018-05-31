@@ -2,7 +2,7 @@ import numpy as np
 from multiprocessing import Process
 
 from .solver import Solver
-from utils.logger import Logger
+from toolbox.logger import Logger
 log = Logger('WorkerSolver', 20)
 
 
