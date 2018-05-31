@@ -1,5 +1,5 @@
 import numpy as np
-from toolbox.logger import Logger
+from toolboxTom.logger import Logger
 log = Logger('MomentGD')
 
 

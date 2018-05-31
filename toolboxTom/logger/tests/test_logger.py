@@ -1,4 +1,4 @@
-from toolbox.logger import Logger
+from toolboxTom.logger import Logger
 
 
 def test_graphical_logging():

@@ -3,7 +3,7 @@ from multiprocessing import Queue
 from .worker_solver import WorkerSolver
 from .problem import _Problem
 
-from toolbox.logger import Logger
+from toolboxTom.logger import Logger
 log = Logger('//Solver', 20)
 
 

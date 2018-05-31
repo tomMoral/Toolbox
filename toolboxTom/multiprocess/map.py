@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from toolbox.logger import Logger
+from toolboxTom.logger import Logger
 import multiprocessing
 from multiprocessing import Process, Queue
 log = Logger(name='map')
